@@ -29,30 +29,23 @@ def text_formatter(txt):
 
         return final, lines, max_width
     except Exception as err:
-        printe(err)
         return "Errore", 1, 5
 
 
 def fade_in(obj):
-    try:
-        op = 0
-        while op < 1:
-            obj.setWindowOpacity(op)
-            sleep(0.005)
-            op += 0.005
-    except Exception as err:
-        printe(err)
+    op = 0
+    while op < 1:
+        obj.setWindowOpacity(op)
+        sleep(0.005)
+        op += 0.005
 
 
 def fade_out(obj):
-    try:
-        op = 1
-        while op > 0:
-            obj.setWindowOpacity(op)
-            sleep(0.001)
-            op -= 0.002
-    except Exception as err:
-        printe(err)
+    op = 1
+    while op > 0:
+        obj.setWindowOpacity(op)
+        sleep(0.001)
+        op -= 0.002
 
 
 def get_cores():

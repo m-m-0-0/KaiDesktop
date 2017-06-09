@@ -1,6 +1,6 @@
 # coding=utf-8
-# Copyright (c) 2017 Kaikyu
 
+# Copyright (c) 2017 Kaikyu
 
 # 888    d8P  d8b 888                                                .d8888b.                888
 # 888   d8P   Y8P 888                                               d88P  Y88b               888
@@ -11,17 +11,27 @@
 # 888   Y88b  888 Y88b.       X88 Y88  888 888  888 Y8b.            Y88b  d88P Y88..88P Y88b 888 Y8b.
 # 888    Y88b 888  "Y888  88888P'  "Y88888 888  888  "Y8888          "Y8888P"   "Y88P"   "Y88888  "Y8888
 
+# Thanks to Konstantin Lepa for Termcolor (https://pypi.python.org/pypi/termcolor)
+
 from time import strftime
 import inspect
+import os
 
-try:
-    from termcolor import colored
-except:
-    print("Installing termcolor...")
-    import os
-    os.system("python3 -m pip install termcolor")
-    from termcolor import colored
-
+COLORS = dict(
+        list(zip([
+            'grey',
+            'red',
+            'green',
+            'yellow',
+            'blue',
+            'magenta',
+            'cyan',
+            'white',
+            ],
+            list(range(30, 38))
+            ))
+        )
+RESET = '\033[0m'
 
 WHITE = "white"
 RED = "red"
@@ -35,35 +45,40 @@ MAGENTA = "magenta"
 file = False
 
 
+def colored(text, color=None):
+    if os.getenv('ANSI_COLORS_DISABLED') is None:
+        fmt_str = '\033[%dm%s'
+        if color is not None:
+            text = fmt_str % (COLORS[color], text)
+
+        text += RESET
+    return text
+
+
 def colored2(text, *args):
     return text
 
 
-def setType(t):
-    global file
-    if t == 1:
-        file = True
-    elif t == 0:
-        file = False
-    else:
-        print("Hmm...")
-
-
-def init():
+def init(mode=0):
     global colored
-    try:
-        old = open("Log.txt").read()
-    except:
-        old = ""
+    global file
 
-    with open("OldLog.txt", "w") as fl:
-        fl.write(old)
-        fl.close()
-    with open("log.txt", "w") as fl:
-        fl.write("Logger inizializzato.\n")
-        fl.close()
-    colored = colored2
-    pass
+    if mode == 0:
+        file = True  # Se file è True il logger scriverà su file
+        colored = colored2  # evitiamo che il testo venga colorato perchè andrà su file
+        try:
+            old = open("Log.txt").read()
+        except:
+            old = ""
+
+        with open("OldLog.txt", "w") as fl:
+            fl.write(old)
+            fl.close()
+        with open("log.txt", "w") as fl:
+            fl.write("Logger inizializzato.\n")
+            fl.close()
+    else:
+        file = False
 
 
 def lt():

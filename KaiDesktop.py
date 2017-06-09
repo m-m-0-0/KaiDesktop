@@ -1,4 +1,5 @@
 # coding=utf-8
+
 # Copyright (c) 2017 Kaikyu
 
 
@@ -11,31 +12,34 @@
 # 888   Y88b  888 Y88b.       X88 Y88  888 888  888 Y8b.            Y88b  d88P Y88..88P Y88b 888 Y8b.
 # 888    Y88b 888  "Y888  88888P'  "Y88888 888  888  "Y8888          "Y8888P"   "Y88P"   "Y88888  "Y8888
 
+try:
+    import Logger as log
 
-import win32con
-import Logger as log
+    log.init()
+    log.i("Avvio Kai Desktop...")
 
-log.init()
-log.setType(1)
-log.i("Avvio Kai Desktop...")
+    import sys
 
-import sys
-from PyQt5.QtWidgets import QApplication, QSplashScreen
-from PyQt5.QtGui import QPixmap
-from KaiUtils import *
-from PyQt5.QtCore import Qt
-from threading import Thread
+    from KaiUtils import *
+    from PyQt5.QtWidgets import QApplication, QSplashScreen
+    from PyQt5.QtGui import QPixmap
+    from PyQt5.QtCore import Qt
+    from threading import Thread
+except Exception as err:
+    print(str(err))
+    import os
+    os._exit(0)
+
 log.d("Elementi base per la splash screen importati correttamente")
 
 app = QApplication(sys.argv)
-screen_resolution = app.desktop().screenGeometry()
-width, height = screen_resolution.width(), screen_resolution.height()
+width, height = app.desktop().screenGeometry().width(), app.desktop().screenGeometry().height()
 log.i("Rilevato monitor %s*%s" % (width, height))
 
 KeepRatio = Qt.KeepAspectRatio
 SmoothTrans = Qt.SmoothTransformation
 IgnoreTrans = Qt.IgnoreAspectRatio
-log.i("Setting qualità impostati a: High")
+log.i("Setting qualità impostati a high")
 
 
 class SplashScreen(QSplashScreen):
@@ -50,31 +54,39 @@ class SplashScreen(QSplashScreen):
 Splash = SplashScreen()
 log.d("Splash screen creata")
 
-import random
-import STTModule as Sr
-import pyqtgraph
-import SWHear
-import os
-import subprocess
-import numpy as np
+try:
+    import random
+    import STTModule as Sr
+    import os
+    import platform
+    import subprocess
 
-from win32gui import SetWindowPos
-from socket import *
+    from socket import *
+    from requests import get
+    from psutil import users
+    from time import sleep
+    from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QMessageBox, QMenu
+    from PyQt5.QtCore import QRect, QTimer, QThread
+    from PyQt5.QtGui import QFont, QImage, QPainter, QIcon
+except Exception as err:
+    print(str(err))
+    os._exit(0)
 
-np.seterr(all="ignore")
-
-from requests import get
-from pyqtgraph import PlotWidget
-from psutil import users
 UserName = str(users()[0][0]).capitalize()
 log.i("Username rilevato: %s" % UserName)
+platform = platform.system()
+log.i("Rilevata piattaforma: %s" % platform)
 
-from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QMessageBox, QMenu
-from PyQt5.QtCore import QRect, QTimer, QThread
-from PyQt5.QtGui import QFont, QImage, QPainter
-from time import sleep
-from win32api import WinExec
-log.i("Import e settings: OK")
+if platform == "Windows":
+    import win32con
+    from win32gui import SetWindowPos
+    from win32api import WinExec as Exec
+else:
+    def Exec(*args):
+        Kai.Say("Questa funzionalità non è ancora pronta su questa piattaforma (%s)" % platform)
+        log.d("Exec eseguito")
+
+log.i("Importate librerie per %s" % platform)
 
 
 def setVolume(val):
@@ -166,6 +178,7 @@ class NewWindow(QWidget):
 class KaiDesktop(QWidget):
     def __init__(self):
         super().__init__()
+        self.setWindowIcon(QIcon('./Images/KaiDesktop.ico'))
         self.isStarted = False
         self.isFlipped = False
         self.isStopped = False
@@ -209,12 +222,15 @@ class KaiDesktop(QWidget):
         self.mainLabel = QLabel(self)
         self.mainLabel.resize(pixw + height / 2, pixh)
         self.mainLabel.move(self.width() / 2 - pixw / 2, 0)
+
         self.mouthLabel = QLabel(self)
         self.mouthLabel.resize(pixw + height / 2, pixh)
         self.mouthLabel.move(self.width() / 2 - pixw / 2, 0)
+
         self.eyesLabel = QLabel(self)
         self.eyesLabel.resize(pixw + height / 2, pixh)
         self.eyesLabel.move(self.width() / 2 - pixw / 2, 0)
+
         self.MessageManager = Message(self)
         self.MessageManager.setAlignment(Qt.AlignCenter)
         self.VBox.addWidget(self.MessageManager, alignment=Qt.AlignCenter)
@@ -227,24 +243,9 @@ class KaiDesktop(QWidget):
         self.stateLabel.setAlignment(Qt.AlignCenter)
         self.stateLabel.setGeometry(QRect(width / 100, width / 100, width * 0.38, height * 1.2))
         self.VBox.addWidget(self.stateLabel, alignment=Qt.AlignCenter)
-        self.audioLabel = PlotWidget(self)
-        a_range = height * 9
-        log.d("Range impostato a %s" % a_range)
-        self.audioLabel.plotItem.setRange(yRange=[-a_range, a_range])
-        self.audioLabel.resize(pixw/3, pixh/2)
-        self.audioLabel.move(self.width() / 2, self.height()-pixh/3)
-        self.VBox.addWidget(self.audioLabel, alignment=Qt.AlignCenter)
         self.VBox.addWidget(self.mouthLabel, alignment=Qt.AlignCenter)
         self.VBox.addWidget(self.eyesLabel, alignment=Qt.AlignCenter)
         self.VBox.addStretch()
-        pyqtgraph.setConfigOption('background', 't')  # before loading widget
-        self.audioLabel.setStyleSheet("background: transparent")
-        try:
-            self.ear = SWHear.SWHear(rate=44100, updatesPerSecond=30)
-            self.ear.stream_start()
-        except:
-            log.w("Nessun microfono rilevato, disattivo le funzioni vocali")
-            self.hasMic = False
         self.mouseMoveEvent = self.kaiMove
         self.mouseReleaseEvent = self.kaiStopMove
         self.mousePressEvent = self.onClick
@@ -256,30 +257,11 @@ class KaiDesktop(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setMouseTracking(True)
         self.mainLabel.setPixmap(self.main)
-
         self.move(-width / 7, height / 3)
         self.setWindowOpacity(0)
         self.show()
         self.isStarted = True
         self.onReady()
-
-    def update(self):
-        if self.isStopped or not self.hasMic:
-            self.audioLabel.close()
-            return
-        if not (self.ear.data is None or self.ear.fft is None):
-            if self.waitTime > 0: show = True
-            elif np.max(np.abs(self.ear.data)) > 1000:
-                show = True
-                self.waitTime = 300
-            else:
-                show = False
-            if show:
-                self.audioLabel.plot(self.ear.datax, self.ear.data, pen=pyqtgraph.mkPen(color='w'), clear=True)
-            elif self.waitTime == 0:
-                self.audioLabel.plot(self.ear.datax, self.ear.data, pen=pyqtgraph.mkPen(color='t'), clear=True)
-            self.waitTime -= 5
-        QTimer.singleShot(10, self.update)
 
     def loadFrames(self):
         w = width / 1.5
@@ -362,22 +344,25 @@ class KaiDesktop(QWidget):
         try:
             if not self.isTalking:
                 if not lowPriority:
-                    SetWindowPos(self.winId(),
-                                 win32con.HWND_TOPMOST,
-                                 # always on top. only reliable way to bring it to the front on windows
-                                 0, 0, 0, 0,
-                                 win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW)
+                    if platform == "Windows":
+                        SetWindowPos(self.winId(),
+                                     win32con.HWND_TOPMOST,
+                                     # always on top. only reliable way to bring it to the front on windows
+                                     0, 0, 0, 0,
+                                     win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW)
 
-                    SetWindowPos(self.winId(),
-                                 win32con.HWND_NOTOPMOST,
-                                 # disable the always on top, but leave window at its top position
-                                 0, 0, 0, 0,
-                                 win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW)
+                        SetWindowPos(self.winId(),
+                                     win32con.HWND_NOTOPMOST,
+                                     # disable the always on top, but leave window at its top position
+                                     0, 0, 0, 0,
+                                     win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW)
+
                 self.MessageManager.sendMessage(text)
         except Exception as err:
             log.e(err)
 
     def getClickPercentage(self, pos):
+        # Questo ritornerà la posizione del click in percenutale
         return int(pos().x()/(self.width()/100)), int(pos().y()/(self.height()/100))
 
     def getClickResponse(self, pos):
@@ -408,10 +393,12 @@ class KaiDesktop(QWidget):
     def onCPUhigh(self):
         self.Say("%s, l'utilizzo della CPU è al %s" % (UserName, str(self.CPU) + "%!"))
         self.hasWarned = True
+        QTimer.singleShot(5000, self.HWMonitor)
 
     def onRAMhigh(self):
         self.Say("%s, stai utilizzando la RAM al %s >~>" % (UserName, str(self.RAM) + "%!"))
         self.hasWarned = True
+        QTimer.singleShot(5000, self.HWMonitor)
 
     def HWMonitor(self):
         self.CPU = get_usage()
@@ -424,11 +411,14 @@ class KaiDesktop(QWidget):
 
         if self.checkCount == 10:
             Thread(target=self.checkConnection).start()
+            self.antiFreeze()
             self.checkCount = 0
-            self.hasWarned = False
 
         self.checkCount += 1
         QTimer.singleShot(1000, self.HWMonitor)
+
+    def resetWarn(self):
+        self.hasWarned = False
 
     def checkConnection(self):
         old = self.isConnected
@@ -444,12 +434,14 @@ class KaiDesktop(QWidget):
         Thread(target=fade_in, args=(self,), name="FadeIn").start()
         Thread(target=self.Animator, name="Animator").start()
         Thread(target=self.comunicate, name="comunicate").start()
-        self.voiceHanlder.start()
-        self.update()
+        if platform == "Windows":
+            self.voiceHanlder.start()
+        else:
+            log.w("Su questa piattaforma non sono disponibili i comandi vocali")
         self.HWMonitor()
         fade_out(Splash)
         Splash.close()
-        self.Say("Eccomi, %s~" % UserName, lowPriority=True)
+        self.Say("Bentornato, %s~" % UserName, lowPriority=True)
 
     def onFlip(self):
         if self.isFlipped:
@@ -470,6 +462,7 @@ class KaiDesktop(QWidget):
             self.onFlip()
 
     def comunicate(self):
+        # Work in progress
         try:
             usr = "52962566"
             passw = "12345"
@@ -491,12 +484,16 @@ class KaiDesktop(QWidget):
                     if "spegni" in command:
                         Kai.Say("Spengo il computer, ciao %s!" % UserName)
                         sleep(0.2)
-                        WinExec("shutdown.exe /p /f")
+                        Exec("shutdown.exe /p /f")
                         Kai.isStopped = True
         except Exception as err:
             sleep(4)
             Kai.Say("Si è verificato un errore: " + str(err))
             log.e("Errore nel socket")
+
+    def antiFreeze(self):
+        "Questo sarà un metodo momentaneo per testare i freeze di Kai"
+        self.onFlip()
 
 
 class Message(QLabel):
@@ -637,7 +634,7 @@ class KaiHandler(QThread):
         elif "130 martin garrix" in command:
             Kai.Say("SI VOLAAAAA!")
         elif "spegni il computer" in command:
-            WinExec("shutdown.exe /p /f")
+            Exec("shutdown.exe /p /f")
             Kai.isStopped = True
         elif "Non ho capito..." in command:
             Kai.Say("Non ho capito...", lowPriority=True)
@@ -646,30 +643,30 @@ class KaiHandler(QThread):
 
         if "apri" in command:
             if "telegram" in command:
-                WinExec("C:\\Users\\Kaikyu\\AppData\\Roaming\\Telegram Desktop\\Telegram.exe")
+                Exec("C:\\Users\\Kaikyu\\AppData\\Roaming\\Telegram Desktop\\Telegram.exe")
                 Kai.Say("Telegram aperto!")
 
             if "chrome" in command:
-                WinExec("C:\\Program Files (x86)\Google\Chrome\Application\chrome.exe")
+                Exec("C:\\Program Files (x86)\Google\Chrome\Application\chrome.exe")
                 Kai.Say("Chrome aperto!")
 
             if "google" in command:
-                WinExec("C:\\Program Files (x86)\Google\Chrome\Application\chrome.exe", "www.google.com")
+                Exec("C:\\Program Files (x86)\Google\Chrome\Application\chrome.exe", "www.google.com")
                 Kai.Say("Google aperto!")
 
             if "youtube" in command:
-                WinExec("C:\\Program Files (x86)\Google\Chrome\Application", 'chrome.exe "www.youtube.com"')
+                Exec("C:\\Program Files (x86)\Google\Chrome\Application", 'chrome.exe "www.youtube.com"')
                 Kai.Say("Youtube aperto!")
 
             if "osu" in command:
-                WinExec("C:\\Program Files\osu!\osu!.exe")
+                Exec("C:\\Program Files\osu!\osu!.exe")
                 Kai.Say("osu! aperto!")
 
         elif "cerca" in command:
             try:
                 Kai.Say("Cerco: " + command.split("cerca ")[1])
                 sleep(0.9)
-                WinExec("\"C:\\Program Files (x86)\Google\Chrome\Application\chrome.exe\""
+                Exec("\"C:\\Program Files (x86)\Google\Chrome\Application\chrome.exe\""
                         " \"https://www.google.it/?gfe_rd=cr&ei=OE0bWfL1CYf38AfRiLWYBw#q=%s\"" %
                         command.split("cerca")[1])
             except:
@@ -681,15 +678,7 @@ class KaiHandler(QThread):
                 Kai.Say("osu! chiuso!")
 
     def checkMic(self):
-        try:
-            tmp = SWHear.SWHear()
-            tmp.initiate()
-            tmp.stream_start()
-            Kai.hasMic = True
-            tmp.close()
-            return True
-        except Exception as err:
-            return False
+        return True
 
     def run(self):
         try:
@@ -733,5 +722,3 @@ class KaiHandler(QThread):
 Kai = KaiDesktop()
 log.i("Istanza di Kai pronta")
 os._exit(app.exec_())
-log.i("App terminata.")
-
