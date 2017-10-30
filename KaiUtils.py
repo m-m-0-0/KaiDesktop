@@ -33,20 +33,14 @@ def text_formatter(txt):
 
 
 def fade_in(obj):
-    op = 0
-    while op < 1:
-        obj.setWindowOpacity(op)
-        sleep(0.005)
-        op += 0.005
-
+    for op in range(0,1000,5):
+        obj.setWindowOpacity(op/1000)
+        sleep(0.001)
 
 def fade_out(obj):
-    op = 1
-    while op > 0:
-        obj.setWindowOpacity(op)
+    for op in range(1000,0,-2):
+        obj.setWindowOpacity(op/1000)
         sleep(0.001)
-        op -= 0.002
-
 
 def get_cores():
     return int(psutil.cpu_count())
@@ -76,7 +70,4 @@ def get_battery():
 
 
 def has_battery():
-    if psutil.sensors_battery():
-        return True
-    else:
-        return False
+    return psutil.sensors_battery():
