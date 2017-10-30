@@ -165,12 +165,12 @@ class NewWindow(QWidget):
         self.move(self.x() + x, self.y() + y)
 
     def fadeIn(self):
-        for i in reversed(range(1, 10)):
+        for i in range(9, 0, -1):
             self.setWindowOpacity(1/i)
             sleep(0.01)
 
     def fadeOut(self):
-        for i in reversed(range(1, 20)):
+        for i in range(20,0,-1):
             self.setWindowOpacity(i*5/100)
             sleep(0.01)
 
@@ -539,7 +539,7 @@ class Message(QLabel):
             painter.end()
 
     def fadeIn(self):
-        for i in reversed(range(5)):
+        for i in range(4,-1,-1):
             sleep(0.04)
             tmp = QImage('./Images/fumetto.png').scaled(self.final_h, self.final_w, IgnoreTrans, Qt.FastTransformation)
             painter = QPainter()
